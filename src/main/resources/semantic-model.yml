@@ -1,0 +1,51 @@
+# Minimal market-risk semantic model for POC
+#
+# Concepts:
+# - datasets declare physical tables + their grain + dimension column mappings
+# - metrics declare meaning + dataset + expression + allowed group-by + required dims
+#
+dimensions:
+  cob_date:
+    description: "Close of business date"
+    type: "date"
+  desk:
+    description: "Trading desk identifier"
+    type: "string"
+  book:
+    description: "Trading book identifier"
+    type: "string"
+
+datasets:
+  gold_var_by_desk:
+    table: "gold_var_by_desk"
+    grain: "desk"
+    dimensions:
+      cob_date: "cob_date"
+      desk: "desk_id"
+
+  gold_delta_by_book:
+    table: "gold_delta_by_book"
+    grain: "book"
+    dimensions:
+      cob_date: "cob_date"
+      desk: "desk_id"
+      book: "book_id"
+
+metrics:
+  var_99_10d_usd:
+    description: "VaR 99% 10D in USD (desk grain)"
+    dataset: "gold_var_by_desk"
+    expression: "SUM(var_99_10d_usd)"
+    grain: "desk"
+    allowedGroupBy: ["desk"]
+    requiredDimensions: ["cob_date"]
+    nonAdditive: false
+
+  delta_usd:
+    description: "Delta sensitivity in USD (book grain)"
+    dataset: "gold_delta_by_book"
+    expression: "SUM(delta_usd)"
+    grain: "book"
+    allowedGroupBy: ["desk", "book"]
+    requiredDimensions: ["cob_date"]
+    nonAdditive: false

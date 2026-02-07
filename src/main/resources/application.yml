@@ -1,0 +1,15 @@
+server:
+  port: 8090
+
+runa:
+  skadiBaseUrl: "http://localhost:8080"
+  skadiSubmitPath: "/api/v1/queries"
+  # If your Skadi version uses a different arrow results endpoint, change it here.
+  skadiArrowResultPathTemplate: "/api/v1/queries/{queryId}/results/arrow"
+  modelResource: "semantic-model.yml"
+
+# For POC we pass JDBC config through to Skadi. Prefer env vars / secrets manager in real deployments.
+warehouse:
+  jdbcUrl: "jdbc:h2:mem:runa_demo;DB_CLOSE_DELAY=-1"
+  username: "sa"
+  password: ""
