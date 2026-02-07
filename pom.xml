@@ -3,33 +3,36 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
+  <!--
+    Use the Spring Boot parent to pin Maven plugin versions (compiler, surefire, boot plugin, etc.)
+    and keep builds stable across Maven/IDE versions.
+  -->
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <!--
+      3.3.13 includes fixes for CVE-2024-38807 (fixed in 3.3.3+) and is the latest 3.3.x patch line.
+      If you prefer, you can move to 3.4.x+ instead.
+    -->
+    <version>3.3.13</version>
+    <relativePath/>
+  </parent>
+
   <groupId>org.iceforge</groupId>
   <artifactId>runa</artifactId>
   <version>0.1.0-SNAPSHOT</version>
   <name>Iceforge Semantic Layer</name>
   <description>Semantic layer service that compiles semantic queries into SQL and various DSL internal query languages and streams Arrow results via Skadi.</description>
 
-  <parent>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-parent</artifactId>
-    <version>3.3.4</version>
-    <relativePath/>
-  </parent>
   <properties>
     <java.version>21</java.version>
-    <spring-boot.version>3.3.4</spring-boot.version>
     <jackson.version>2.17.2</jackson.version>
+    <dependency-check.version>12.2.0</dependency-check.version>
   </properties>
 
   <dependencyManagement>
     <dependencies>
-      <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-dependencies</artifactId>
-        <version>${spring-boot.version}</version>
-        <type>pom</type>
-        <scope>import</scope>
-      </dependency>
+      <!-- Optional: keep Jackson pinned explicitly (Spring Boot also manages Jackson). -->
       <dependency>
         <groupId>com.fasterxml.jackson</groupId>
         <artifactId>jackson-bom</artifactId>
@@ -103,6 +106,59 @@
           <release>${java.version}</release>
         </configuration>
       </plugin>
+
+      <!-- Optional: silence ByteBuddy/Mockito inline dynamic-agent warnings on newer JDKs -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <argLine>-XX:+EnableDynamicAgentLoading</argLine>
+        </configuration>
+      </plugin>
     </plugins>
   </build>
+
+  <!--
+    Security scanning (opt-in):
+      mvn -Psecurity-scan verify
+    Note: first run downloads NVD/OSV data and may take a while.
+  -->
+  <profiles>
+    <profile>
+      <id>security-scan</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.owasp</groupId>
+            <artifactId>dependency-check-maven</artifactId>
+            <version>${dependency-check.version}</version>
+            <executions>
+              <execution>
+                <id>dependency-check</id>
+                <goals>
+                  <goal>check</goal>
+                </goals>
+              </execution>
+            </executions>
+            <configuration>
+              <!-- Fail the build on high/critical findings. Tune as desired. -->
+              <failBuildOnCVSS>7.0</failBuildOnCVSS>
+
+              <!-- Include test scope so issues in test dependencies are visible. -->
+              <skipTestScope>false</skipTestScope>
+
+              <!-- Reports -->
+              <format>ALL</format>
+              <outputDirectory>${project.build.directory}</outputDirectory>
+
+              <!--
+                If you need suppressions, add a file and uncomment the line below:
+                <suppressionFile>${project.basedir}/dependency-check-suppressions.xml</suppressionFile>
+              -->
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>
